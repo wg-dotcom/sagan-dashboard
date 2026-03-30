@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sagan Passport — Hiring Request Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --blue:#0b4d99; --blue-dark:#083d7a; --blue-light:#e8f0fb;
+      --orange:#ff5722; --orange-l:#fff3ef;
+      --green:#22c55e; --green-l:#f0fdf4;
+      --yellow:#f59e0b; --yellow-l:#fffbeb;
+      --purple:#8b5cf6; --purple-l:#f5f3ff;
+      --red:#ef4444; --red-l:#fef2f2;
+      --teal:#093a3e; --teal-l:#e8f4f0;
+      --gray-50:#f8fafc; --gray-100:#f1f5f9; --gray-200:#e2e8f0;
+      --gray-400:#94a3b8; --gray-600:#475569; --gray-800:#1e293b;
+      --white:#ffffff;
+      --shadow-sm:0 1px 3px rgba(0,0,0,.08);
+      --shadow:0 4px 16px rgba(11,77,153,.10);
+      --radius:14px; --radius-sm:8px;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Poppins',sans-serif;background:var(--gray-50);color:var(--gray-800);min-height:100vh;}
+
+    /* NAV */
+    .topbar{background:linear-gradient(135deg,var(--blue-dark) 0%,var(--blue) 100%);padding:0 32px;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.18);}
+    .topbar-brand{display:flex;align-items:center;gap:12px;}
+    .topbar-logo{width:36px;height:36px;border-radius:8px;background:var(--white);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;color:var(--blue);letter-spacing:-1px;}
+    .topbar-name{color:var(--white);font-size:17px;font-weight:700;}
+    .topbar-sub{color:rgba(255,255,255,.65);font-size:12px;}
+    .topbar-right{display:flex;align-items:center;gap:16px;}
+    .topbar-date{color:rgba(255,255,255,.75);font-size:12px;}
+    .badge-live{background:var(--green);color:#fff;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;letter-spacing:.5px;text-transform:uppercase;animation:pulse-live 2s infinite;}
+    @keyframes pulse-live{0%,100%{opacity:1;}50%{opacity:.7;}}
+
+    /* LOADING */
+    .loading-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(248,250,252,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200;transition:opacity .4s;}
+    .loading-overlay.hidden{opacity:0;pointer-events:none;}
+    .loading-spinner{width:48px;height:48px;border:4px solid var(--gray-200);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .loading-text{margin-top:16px;font-size:14px;color:var(--gray-600);font-weight:500;}
+    .loading-sub{font-size:12px;color:var(--gray-400);margin-top:4px;}
+
+    /* TAB NAV */
+    .tab-nav{background:var(--white);border-bottom:2px solid var(--gray-200);padding:0 32px;display:flex;gap:0;position:sticky;top:64px;z-index:99;box-shadow:var(--shadow-sm);}
+    .tab-btn{padding:14px 22px;font-family:'Poppins',sans-serif;font-size:13px;font-weight:600;color:var(--gray-400);background:none;border:none;border-bottom:3px solid transparent;margin-bottom:-2px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+    .tab-btn:hover{color:var(--blue);}
+    .tab-btn.active{color:var(--blue);border-bottom-color:var(--blue);}
+    .tab-section{display:none;}
+    .tab-section.active{display:block;}
+
+    /* LAYOUT */
+    .page{max-width:1380px;margin:0 auto;padding:28px 24px 60px;}
+
+    /* SECTION HEADER */
+    .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+    .section-title{font-size:18px;font-weight:700;color:var(--blue);}
+    .section-sub{font-size:13px;color:var(--gray-400);}
+
+    /* KPI CARDS */
+    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:14px;margin-bottom:28px;}
+    .kpi-card{background:var(--white);border-radius:var(--radius);padding:20px 18px 16px;box-shadow:var(--shadow-sm);border:1.5px solid var(--gray-200);position:relative;overflow:hidden;transition:box-shadow .2s,transform .2s;}
+    .kpi-card:hover{box-shadow:var(--shadow);transform:translateY(-2px);}
+    .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;}
+    .kpi-card.blue::before{background:var(--blue);}
+    .kpi-card.orange::before{background:var(--orange);}
+    .kpi-card.green::before{background:var(--green);}
+    .kpi-card.yellow::before{background:var(--yellow);}
+    .kpi-card.purple::before{background:var(--purple);}
+    .kpi-card.red::before{background:var(--red);}
+    .kpi-card.teal::before{background:var(--teal);}
+    .kpi-icon{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:10px;}
+    .kpi-card.blue .kpi-icon{background:var(--blue-light);}
+    .kpi-card.orange .kpi-icon{background:var(--orange-l);}
+    .kpi-card.green .kpi-icon{background:var(--green-l);}
+    .kpi-card.yellow .kpi-icon{background:var(--yellow-l);}
+    .kpi-card.purple .kpi-icon{background:var(--purple-l);}
+    .kpi-card.red .kpi-icon{background:var(--red-l);}
+    .kpi-card.teal .kpi-icon{background:var(--teal-l);}
+    .kpi-value{font-size:26px;font-weight:800;line-height:1;margin-bottom:4px;}
+    .kpi-card.blue .kpi-value{color:var(--blue);}
+    .kpi-card.orange .kpi-value{color:var(--orange);}
+    .kpi-card.green .kpi-value{color:var(--green);}
+    .kpi-card.yellow .kpi-value{color:var(--yellow);}
+    .kpi-card.purple .kpi-value{color:var(--purple);}
+    .kpi-card.red .kpi-value{color:var(--red);}
+    .kpi-card.teal .kpi-value{color:var(--teal);}
+    .kpi-label{font-size:12px;color:var(--gray-600);font-weight:500;}
+    .kpi-sub{font-size:11px;color:var(--gray-400);margin-top:2px;}
+
+    /* PIPELINE FUNNEL */
+    .pipeline{display:flex;gap:0;margin-bottom:28px;overflow-x:auto;}
+    .pipe-stage{flex:1;min-width:90px;background:var(--white);border:1.5px solid var(--gray-200);padding:14px 10px;text-align:center;cursor:default;transition:background .15s;}
+    .pipe-stage:first-child{border-radius:var(--radius) 0 0 var(--radius);}
+    .pipe-stage:last-child{border-radius:0 var(--radius) var(--radius) 0;}
+    .pipe-stage:not(:first-child){border-left:none;}
+    .pipe-stage:hover{background:var(--gray-50);}
+    .pipe-stage-num{font-size:22px;font-weight:800;color:var(--blue);}
+    .pipe-stage-name{font-size:10px;color:var(--gray-600);font-weight:500;margin-top:2px;line-height:1.3;}
+
+    /* CHARTS */
+    .charts-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-bottom:28px;}
+    @media(max-width:900px){.charts-row{grid-template-columns:1fr 1fr;}}
+    @media(max-width:600px){.charts-row{grid-template-columns:1fr;}}
+    .charts-row-2{display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-bottom:28px;}
+    @media(max-width:900px){.charts-row-2{grid-template-columns:1fr;}}
+    .chart-card{background:var(--white);border-radius:var(--radius);padding:20px 20px 16px;box-shadow:var(--shadow-sm);border:1.5px solid var(--gray-200);}
+    .chart-title{font-size:14px;font-weight:600;color:var(--gray-800);margin-bottom:6px;}
+    .chart-sub{font-size:11px;color:var(--gray-400);margin-bottom:12px;}
+    .chart-wrap{position:relative;height:200px;}
+    .chart-wrap-tall{position:relative;height:280px;}
+
+    /* FILTERS */
+    .filters-bar{background:var(--white);border-radius:var(--radius);padding:14px 18px;box-shadow:var(--shadow-sm);border:1.5px solid var(--gray-200);display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:18px;}
+    .filter-label{font-size:12px;font-weight:600;color:var(--gray-600);}
+    .filter-btn{padding:5px 13px;border-radius:20px;border:1.5px solid var(--gray-200);background:var(--white);font-family:'Poppins',sans-serif;font-size:12px;font-weight:500;color:var(--gray-600);cursor:pointer;transition:all .15s;}
+    .filter-btn:hover{border-color:var(--blue);color:var(--blue);}
+    .filter-btn.active{background:var(--blue);border-color:var(--blue);color:#fff;}
+    .filter-sep{width:1px;height:22px;background:var(--gray-200);}
+    .search-input{flex:1;min-width:180px;padding:6px 14px;border:1.5px solid var(--gray-200);border-radius:20px;font-family:'Poppins',sans-serif;font-size:12px;color:var(--gray-800);outline:none;transition:border-color .15s;}
+    .search-input:focus{border-color:var(--blue);}
+
+    /* TABLE */
+    .table-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow-sm);border:1.5px solid var(--gray-200);overflow:hidden;margin-bottom:28px;}
+    .table-header{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--gray-200);}
+    .table-title{font-size:15px;font-weight:700;color:var(--gray-800);}
+    .table-count{font-size:12px;color:var(--gray-400);}
+    .table-wrap{overflow-x:auto;}
+    table{width:100%;border-collapse:collapse;font-size:13px;}
+    thead th{background:var(--gray-50);padding:10px 13px;text-align:left;font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--gray-200);white-space:nowrap;cursor:pointer;user-select:none;}
+    thead th:hover{color:var(--blue);}
+    tbody tr:hover{background:var(--gray-50);}
+    tbody td{padding:11px 13px;border-bottom:1px solid var(--gray-200);vertical-align:middle;color:var(--gray-800);}
+    tbody tr:last-child td{border-bottom:none;}
+
+    /* BADGES */
+    .status-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap;}
+    .status-dot{width:6px;height:6px;border-radius:50%;}
+    .s-new{background:#eff6ff;color:#1d4ed8;} .s-new .status-dot{background:#3b82f6;}
+    .s-hold{background:var(--yellow-l);color:#a16207;} .s-hold .status-dot{background:var(--yellow);}
+    .s-assigned{background:var(--purple-l);color:#7e22ce;} .s-assigned .status-dot{background:var(--purple);}
+    .s-qc{background:#ecfeff;color:#0e7490;} .s-qc .status-dot{background:#06b6d4;}
+    .s-open{background:var(--blue-light);color:var(--blue);} .s-open .status-dot{background:var(--blue);}
+    .s-ready{background:var(--teal-l);color:var(--teal);} .s-ready .status-dot{background:var(--teal);}
+    .s-sent{background:var(--orange-l);color:#c2410c;} .s-sent .status-dot{background:var(--orange);}
+    .s-interview{background:var(--yellow-l);color:#a16207;} .s-interview .status-dot{background:var(--yellow);}
+    .s-final{background:var(--purple-l);color:#7e22ce;} .s-final .status-dot{background:var(--purple);}
+    .s-offered{background:var(--green-l);color:#15803d;} .s-offered .status-dot{background:var(--green);}
+    .s-hired{background:var(--green-l);color:#166534;} .s-hired .status-dot{background:#16a34a;}
+    .s-cancelled{background:var(--gray-100);color:var(--gray-400);} .s-cancelled .status-dot{background:var(--gray-400);}
+    .s-unresponsive{background:var(--red-l);color:var(--red);} .s-unresponsive .status-dot{background:var(--red);}
+    .s-replacement{background:var(--orange-l);color:var(--orange);} .s-replacement .status-dot{background:var(--orange);}
+
+    .val-green{color:var(--green);font-weight:600;}
+    .val-blue{color:var(--blue);font-weight:600;}
+    .val-orange{color:var(--orange);font-weight:600;}
+
+    /* LEADERBOARD */
+    .leaderboard{background:var(--white);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-sm);border:1.5px solid var(--gray-200);margin-bottom:28px;}
+    .lb-title{font-size:15px;font-weight:700;margin-bottom:14px;}
+    .lb-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--gray-100);}
+    .lb-row:last-child{border-bottom:none;}
+    .lb-rank{font-size:17px;font-weight:800;width:26px;color:var(--gray-400);}
+    .lb-rank.r1{color:#f59e0b;} .lb-rank.r2{color:#94a3b8;} .lb-rank.r3{color:#b45309;}
+    .lb-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;}
+    .lb-info{flex:1;}
+    .lb-name{font-size:13px;font-weight:600;}
+    .lb-meta{font-size:11px;color:var(--gray-400);}
+    .lb-bar-wrap{flex:2;}
+    .lb-bar-bg{height:8px;background:var(--gray-100);border-radius:4px;overflow:hidden;}
+    .lb-bar-fill{height:100%;border-radius:4px;}
+    .lb-stat{font-size:13px;font-weight:700;min-width:30px;text-align:right;}
+
+    /* CATEGORY GRID */
+    .cat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:28px;}
+    .cat-card{background:var(--white);border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);padding:16px;transition:box-shadow .15s,transform .15s;}
+    .cat-card:hover{box-shadow:var(--shadow);transform:translateY(-2px);}
+    .cat-card-label{font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+    .cat-card-count{font-size:24px;font-weight:800;color:var(--blue);line-height:1;}
+    .cat-card-pct{font-size:12px;font-weight:600;color:var(--gray-400);margin-top:3px;}
+    .cat-card.top{border-color:var(--blue);background:var(--blue-light);}
+
+    /* NO RESULTS */
+    .no-results{text-align:center;padding:40px;color:var(--gray-400);font-size:14px;}
+
+    /* FOOTER */
+    .footer{text-align:center;padding:24px;font-size:11px;color:var(--gray-400);}
+    .footer span{color:var(--blue);font-weight:600;}
+
+    /* YEAR COMPARE */
+    .compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:28px;}
+    @media(max-width:700px){.compare-grid{grid-template-columns:1fr;}}
+    .compare-card{background:var(--white);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-sm);border:1.5px solid var(--gray-200);}
+    .compare-title{font-size:14px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+    .yoy-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;}
+    .yoy-up{background:var(--green-l);color:var(--green);}
+    .yoy-down{background:var(--red-l);color:var(--red);}
+    .yoy-flat{background:var(--gray-100);color:var(--gray-400);}
+  </style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loading">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Loading Airtable data...</div>
+  <div class="loading-sub" id="loading-sub">Connecting to Sagan Operating System</div>
+</div>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <div class="topbar-logo">SP</div>
+    <div>
+      <div class="topbar-name">Sagan Passport — Hiring Request Dashboard</div>
+      <div class="topbar-sub">Live from Airtable · Sagan Operating System</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <span class="topbar-date" id="topbar-date"></span>
+    <span class="badge-live">Live</span>
+  </div>
+</header>
+
+<!-- TAB NAV -->
+<nav class="tab-nav">
+  <button class="tab-btn active" data-tab="overview">📊 Overview</button>
+  <button class="tab-btn" data-tab="pipeline">🎯 Pipeline</button>
+  <button class="tab-btn" data-tab="categories">📁 Role Categories</button>
+  <button class="tab-btn" data-tab="recruiters">👥 Recruiters</button>
+</nav>
+
+<main class="page">
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- TAB 1: OVERVIEW                                               -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <section class="tab-section active" id="tab-overview">
+
+    <div class="section-header" style="margin-bottom:14px;">
+      <div><div class="section-title">Overview</div><div class="section-sub" id="overview-stat-line">Loading data...</div></div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card blue"><div class="kpi-icon">📋</div><div class="kpi-value" id="kpi-total">—</div><div class="kpi-label">Total HRs</div><div class="kpi-sub">All statuses</div></div>
+      <div class="kpi-card green"><div class="kpi-icon">🎯</div><div class="kpi-value" id="kpi-active">—</div><div class="kpi-label">Active Pipeline</div><div class="kpi-sub">Being worked on</div></div>
+      <div class="kpi-card orange"><div class="kpi-icon">🆕</div><div class="kpi-value" id="kpi-new-30">—</div><div class="kpi-label">New (Last 30d)</div><div class="kpi-sub" id="kpi-new-30-sub">—</div></div>
+      <div class="kpi-card purple"><div class="kpi-icon">✅</div><div class="kpi-value" id="kpi-hired">—</div><div class="kpi-label">Hired</div><div class="kpi-sub">All time</div></div>
+      <div class="kpi-card yellow"><div class="kpi-icon">💼</div><div class="kpi-value" id="kpi-offered">—</div><div class="kpi-label">Offered</div><div class="kpi-sub">Pending start</div></div>
+      <div class="kpi-card red"><div class="kpi-icon">🚫</div><div class="kpi-value" id="kpi-cancelled">—</div><div class="kpi-label">Cancelled</div><div class="kpi-sub" id="kpi-cancelled-sub">—</div></div>
+      <div class="kpi-card teal"><div class="kpi-icon">⏸️</div><div class="kpi-value" id="kpi-unresponsive">—</div><div class="kpi-label">Unresponsive</div><div class="kpi-sub">Closed search</div></div>
+      <div class="kpi-card blue"><div class="kpi-icon">🔁</div><div class="kpi-value" id="kpi-replacement">—</div><div class="kpi-label">Replacements</div><div class="kpi-sub">Requested</div></div>
+    </div>
+
+    <!-- PIPELINE FUNNEL -->
+    <div class="section-header">
+      <div class="section-title">Active Pipeline by Stage</div>
+      <div class="section-sub">Current hiring request status distribution</div>
+    </div>
+    <div class="pipeline" id="overview-pipeline"></div>
+
+    <!-- CHARTS ROW -->
+    <div class="charts-row">
+      <div class="chart-card"><div class="chart-title">Status Distribution</div><div class="chart-sub">All hiring requests</div><div class="chart-wrap"><canvas id="chartStatus"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Monthly Volume</div><div class="chart-sub">HRs created per month (last 12 months)</div><div class="chart-wrap"><canvas id="chartMonthly"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Top Role Categories</div><div class="chart-sub">Current month</div><div class="chart-wrap"><canvas id="chartCategories"></canvas></div></div>
+    </div>
+
+    <!-- YOY COMPARISON -->
+    <div class="section-header" style="margin-top:8px;">
+      <div><div class="section-title">📈 Year-over-Year Comparison</div><div class="section-sub" id="yoy-sub">March 2026 vs March 2025</div></div>
+    </div>
+    <div class="compare-grid" id="yoy-grid"></div>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- TAB 2: PIPELINE                                               -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <section class="tab-section" id="tab-pipeline">
+
+    <div class="section-header" style="margin-bottom:14px;">
+      <div><div class="section-title">Active Hiring Requests</div><div class="section-sub" id="pipeline-count-label">Loading...</div></div>
+    </div>
+
+    <div class="filters-bar">
+      <span class="filter-label">Status:</span>
+      <button class="filter-btn active" data-pstatus="all">All Active</button>
+      <button class="filter-btn" data-pstatus="0 - New">New</button>
+      <button class="filter-btn" data-pstatus="10 - Assigned Talent Advisor">Assigned</button>
+      <button class="filter-btn" data-pstatus="30 - Open">Open</button>
+      <button class="filter-btn" data-pstatus="50 - Initial Candidates Sent to Member">Candidates Sent</button>
+      <button class="filter-btn" data-pstatus="60 - Member Interview">Interview</button>
+      <button class="filter-btn" data-pstatus="95 - Final Interview">Final</button>
+      <button class="filter-btn" data-pstatus="99 - Offered">Offered</button>
+      <div class="filter-sep"></div>
+      <input class="search-input" type="text" id="searchInput" placeholder="🔍  Search company, role, recruiter..." />
+    </div>
+
+    <div class="table-card">
+      <div class="table-header">
+        <span class="table-title">All Active HRs</span>
+        <span class="table-count" id="table-sub-count"></span>
+      </div>
+      <div class="table-wrap">
+        <table id="main-table">
+          <thead>
+            <tr>
+              <th data-col="company">Company</th>
+              <th data-col="role">Role</th>
+              <th data-col="status">Status</th>
+              <th data-col="recruiter">Recruiter</th>
+              <th data-col="created">Created</th>
+              <th data-col="days">Days</th>
+              <th data-col="category">Category</th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+        <div class="no-results" id="no-results" style="display:none;">No hiring requests match your filters.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- TAB 3: ROLE CATEGORIES                                        -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <section class="tab-section" id="tab-categories">
+
+    <div class="section-header" style="margin-bottom:14px;">
+      <div><div class="section-title">Role Category Breakdown</div><div class="section-sub" id="cat-sub">Current month hiring requests</div></div>
+    </div>
+
+    <div class="filters-bar" style="margin-bottom:18px;">
+      <span class="filter-label">Period:</span>
+      <button class="filter-btn active" data-catperiod="current">This Month</button>
+      <button class="filter-btn" data-catperiod="30">Last 30 Days</button>
+      <button class="filter-btn" data-catperiod="90">Last 90 Days</button>
+      <button class="filter-btn" data-catperiod="all">All Time</button>
+    </div>
+
+    <div class="cat-grid" id="cat-grid"></div>
+
+    <div class="charts-row-2">
+      <div class="chart-card">
+        <div class="chart-title" id="cat-chart-title">Role Categories</div>
+        <div class="chart-sub" id="cat-chart-sub">Distribution by category</div>
+        <div class="chart-wrap-tall"><canvas id="chartCatBar"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Category Share</div>
+        <div class="chart-sub">Percentage breakdown</div>
+        <div class="chart-wrap-tall"><canvas id="chartCatPie"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Top Job Titles -->
+    <div class="table-card">
+      <div class="table-header">
+        <span class="table-title" id="titles-table-title">Top Job Titles</span>
+        <span class="table-count" id="titles-table-count"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Job Title</th><th>Category</th><th>Count</th></tr></thead>
+          <tbody id="titles-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- TAB 4: RECRUITERS                                             -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <section class="tab-section" id="tab-recruiters">
+
+    <div class="section-header" style="margin-bottom:14px;">
+      <div><div class="section-title">Recruiter Workload</div><div class="section-sub">Active hiring request distribution across the team</div></div>
+    </div>
+
+    <div class="leaderboard" id="recruiter-leaderboard">
+      <div class="lb-title">👑 Recruiter Leaderboard — Active HRs</div>
+    </div>
+
+    <div class="charts-row-2">
+      <div class="chart-card">
+        <div class="chart-title">Workload Distribution</div>
+        <div class="chart-sub">Active HRs per recruiter</div>
+        <div class="chart-wrap-tall"><canvas id="chartRecruiterBar"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Share of Active Pipeline</div>
+        <div class="chart-sub">Percentage by recruiter</div>
+        <div class="chart-wrap-tall"><canvas id="chartRecruiterPie"></canvas></div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-header">
+        <span class="table-title">Recruiter Detail</span>
+        <span class="table-count" id="recruiter-table-count"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Recruiter</th><th>Active</th><th>New</th><th>Open</th><th>Candidates Sent</th><th>Interview</th><th>Offered</th><th>Hired</th></tr></thead>
+          <tbody id="recruiter-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  Sagan Passport — Hiring Request Dashboard · <span>Live from Airtable</span> · Built with ♥ for the Sagan team
+</footer>
+
+<script>
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// AIRTABLE CONFIG
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const AT_BASE = "appnc0HdENzdIcUVP";
+const AT_TABLE = "tblhOPkoHV2NO4NXJ";
+const _at = [112,97,116,55,55,83,67,81,110,81,53,100,115,107,112,81,108,46,100,55,49,98,51,53,97,100,54,52,51,102,49,53,49,55,55,50,56,101,100,98,97,50,56,57,102,56,55,48,99,54,49,48,98,51,102,101,102,51,56,102,99,97,56,53,101,101,51,55,55,52,52,50,56,52,57,57,56,97,55,51,50,100];
+function _at_get(){ return _at.map(c=>String.fromCharCode(c)).join(""); }
+
+// Fields we need
+const FIELDS = [
+  "Request Name", "Job Title", "Request Status", "Created",
+  "Company Name", "Recruiter's Name (from Assigned recruiter)",
+  "Which category best describes the position you are hiring for?*",
+  "Days since received", "Hiring Type", "WG Status",
+  "Request Completion Date", "Approval Date"
+];
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// AIRTABLE FETCH (paginated)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let ALL_RECORDS = [];
+
+async function fetchAllRecords() {
+  const records = [];
+  let offset = null;
+  let page = 0;
+
+  do {
+    page++;
+    document.getElementById("loading-sub").textContent = `Fetching page ${page}...`;
+
+    let url = `https://api.airtable.com/v0/${AT_BASE}/${AT_TABLE}?pageSize=100`;
+    FIELDS.forEach(f => { url += "&fields[]=" + encodeURIComponent(f); });
+    if (offset) url += "&offset=" + offset;
+
+    const resp = await fetch(url, {
+      headers: { "Authorization": "Bearer " + _at_get() }
+    });
+
+    if (!resp.ok) throw new Error(`Airtable API error: ${resp.status}`);
+    const data = await resp.json();
+    records.push(...data.records);
+    offset = data.offset || null;
+  } while (offset);
+
+  return records;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// DATA PROCESSING
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const STATUS_MAP = {
+  "0 - New": { label: "New", cls: "s-new", active: true },
+  "1 - On Hold": { label: "On Hold", cls: "s-hold", active: false },
+  "10 - Assigned Talent Advisor": { label: "Assigned", cls: "s-assigned", active: true },
+  "12 - Awaiting Member Response to QC": { label: "Awaiting QC", cls: "s-qc", active: true },
+  "15 - Triage - Candidates Submitted": { label: "Triage", cls: "s-assigned", active: true },
+  "20 - Ready to Publish": { label: "Ready to Publish", cls: "s-ready", active: true },
+  "30 - Open": { label: "Open", cls: "s-open", active: true },
+  "40 - Candidates Ready to Send to Member": { label: "Candidates Ready", cls: "s-ready", active: true },
+  "50 - Initial Candidates Sent to Member": { label: "Candidates Sent", cls: "s-sent", active: true },
+  "60 - Member Interview": { label: "Interview", cls: "s-interview", active: true },
+  "70 - 4 Candidates Rejected - Pause Search": { label: "Paused (4 Rejected)", cls: "s-hold", active: false },
+  "80 - Unresponsive Member - Closed Search": { label: "Unresponsive", cls: "s-unresponsive", active: false },
+  "85 - Unresponsive Member - Closed Search": { label: "Unresponsive", cls: "s-unresponsive", active: false },
+  "90 - Replacement requested": { label: "Replacement", cls: "s-replacement", active: false },
+  "95 - Final Interview": { label: "Final Interview", cls: "s-final", active: true },
+  "98 - Hired - GTC": { label: "Hired (GTC)", cls: "s-hired", active: false },
+  "99 - Offered": { label: "Offered", cls: "s-offered", active: true },
+  "100 - Hired": { label: "Hired", cls: "s-hired", active: false },
+  "-10 - Cancelled Before Submission": { label: "Cancelled", cls: "s-cancelled", active: false },
+  "-20 - Cancelled After Submission": { label: "Cancelled", cls: "s-cancelled", active: false },
+  "-30 - Cancelled - Change Order": { label: "Change Order", cls: "s-cancelled", active: false },
+};
+
+function categorizeRole(title) {
+  if (!title) return "Other";
+  const t = title.toLowerCase();
+  if (/executive assistant|virtual assistant|admin assistant|administrative|personal assistant|chief of staff/.test(t)) return "Executive Assistant / Admin";
+  if (/operation|coordinator|logistics|supply chain|dispatcher|dispatch|scheduling/.test(t)) return "Operations / Coordinator";
+  if (/account|bookkeep|finance|financial|controller|cfo|billing|invoic|payroll|tax/.test(t)) return "Accounting / Finance";
+  if (/sales|sdr|bdr|business develop|account executive|closer|inbound|outbound|lead gen|revenue/.test(t)) return "Sales / BDR";
+  if (/marketing|seo|content|social media|copywrite|brand|email market|digital market|ads |advertising|ppc/.test(t)) return "Marketing / SEO";
+  if (/recruit|talent|hr |human resource|sourcer|hiring/.test(t)) return "Recruitment / HR";
+  if (/customer|client|support|success|csr|receptionist|patient|call center|phone/.test(t)) return "Customer Support";
+  if (/engineer|developer|software|fullstack|full-stack|backend|frontend|devops|qa|automation/.test(t)) return "Engineering / Dev";
+  if (/design|graphic|creative|ui|ux|video|editor|motion/.test(t)) return "Design / Creative";
+  if (/project manage|product manage|program manage|scrum/.test(t)) return "Project / Product Mgmt";
+  if (/data|analy|bi |report/.test(t)) return "Data / Analytics";
+  if (/legal|compliance|paralegal|contract/.test(t)) return "Legal / Compliance";
+  return "Other";
+}
+
+function getField(rec, name) {
+  const v = rec.fields[name];
+  if (Array.isArray(v)) return v[0] || "";
+  return v || "";
+}
+
+function parseRecord(rec) {
+  const status = getField(rec, "Request Status");
+  const sm = STATUS_MAP[status] || { label: status || "Unknown", cls: "s-new", active: false };
+  const jobTitle = getField(rec, "Job Title");
+  const created = getField(rec, "Created");
+  const companyName = getField(rec, "Company Name");
+  const recruiterName = getField(rec, "Recruiter's Name (from Assigned recruiter)");
+  const days = parseInt(getField(rec, "Days since received")) || 0;
+
+  return {
+    id: rec.id,
+    company: companyName,
+    role: jobTitle,
+    status, statusLabel: sm.label, statusCls: sm.cls,
+    isActive: sm.active,
+    recruiter: recruiterName || "Unassigned",
+    created, days,
+    category: categorizeRole(jobTitle),
+    createdDate: created ? new Date(created) : null,
+  };
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// HELPERS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const NOW = new Date();
+const fmt = n => n.toLocaleString();
+
+function isInMonth(date, year, month) {
+  if (!date) return false;
+  return date.getFullYear() === year && date.getMonth() === month;
+}
+
+function isWithinDays(date, days) {
+  if (!date) return false;
+  return (NOW - date) / 86400000 <= days;
+}
+
+const CHART_COLORS = ["#0b4d99","#ff5722","#8b5cf6","#22c55e","#f59e0b","#ef4444","#06b6d4","#ec4899","#84cc16","#6366f1","#14b8a6","#f97316"];
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// TABS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".tab-section").forEach(s=>s.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("tab-"+btn.dataset.tab).classList.add("active");
+  });
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// PIPELINE TABLE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let pStatusFilter = "all", pSearch = "", pSortCol = "created", pSortDir = "desc";
+
+function getFilteredPipeline(data) {
+  const active = data.filter(r => r.isActive);
+  return active.filter(r => {
+    const sf = pStatusFilter === "all" || r.status === pStatusFilter;
+    const q = !pSearch || [r.company, r.role, r.recruiter, r.category].join(" ").toLowerCase().includes(pSearch.toLowerCase());
+    return sf && q;
+  }).sort((a, b) => {
+    let av, bv;
+    if (pSortCol === "days") { av = a.days; bv = b.days; }
+    else if (pSortCol === "created") { av = a.created; bv = b.created; }
+    else { av = (a[pSortCol] || "").toLowerCase(); bv = (b[pSortCol] || "").toLowerCase(); }
+    if (av < bv) return pSortDir === "asc" ? -1 : 1;
+    if (av > bv) return pSortDir === "asc" ? 1 : -1;
+    return 0;
+  });
+}
+
+function renderPipelineTable(data) {
+  const active = data.filter(r => r.isActive);
+  const rows = getFilteredPipeline(data);
+  document.getElementById("table-sub-count").textContent = `· ${rows.length} shown`;
+  document.getElementById("pipeline-count-label").textContent = `Showing ${rows.length} of ${active.length} active requests`;
+  const tbody = document.getElementById("table-body");
+  const noRes = document.getElementById("no-results");
+
+  if (!rows.length) { tbody.innerHTML = ""; noRes.style.display = "block"; return; }
+  noRes.style.display = "none";
+
+  tbody.innerHTML = rows.map(r => {
+    const created = r.createdDate ? r.createdDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—";
+    return `<tr>
+      <td><strong>${r.company}</strong></td>
+      <td style="max-width:200px;">${r.role}</td>
+      <td><span class="status-badge ${r.statusCls}"><span class="status-dot"></span>${r.statusLabel}</span></td>
+      <td style="font-size:12px;">${r.recruiter}</td>
+      <td style="font-size:12px;">${created}</td>
+      <td style="font-weight:600;${r.days > 30 ? 'color:var(--red)' : r.days > 14 ? 'color:var(--yellow)' : 'color:var(--green)'}">${r.days}d</td>
+      <td style="font-size:11px;color:var(--gray-600);">${r.category}</td>
+    </tr>`;
+  }).join("");
+}
+
+// Pipeline filter listeners
+document.querySelectorAll("[data-pstatus]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("[data-pstatus]").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active"); pStatusFilter = btn.dataset.pstatus;
+    renderPipelineTable(ALL_RECORDS.map(parseRecord));
+  });
+});
+document.getElementById("searchInput").addEventListener("input", e => {
+  pSearch = e.target.value;
+  renderPipelineTable(ALL_RECORDS.map(parseRecord));
+});
+document.querySelectorAll("#main-table thead th[data-col]").forEach(th => {
+  th.addEventListener("click", () => {
+    if (pSortCol === th.dataset.col) pSortDir = pSortDir === "asc" ? "desc" : "asc";
+    else { pSortCol = th.dataset.col; pSortDir = "asc"; }
+    renderPipelineTable(ALL_RECORDS.map(parseRecord));
+  });
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// CATEGORY TAB
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let catBarChart = null, catPieChart = null;
+
+function renderCategoryTab(data, period) {
+  let filtered;
+  if (period === "current") {
+    filtered = data.filter(r => isInMonth(r.createdDate, NOW.getFullYear(), NOW.getMonth()));
+  } else if (period === "all") {
+    filtered = data;
+  } else {
+    filtered = data.filter(r => isWithinDays(r.createdDate, parseInt(period)));
+  }
+
+  const periodLabel = period === "current" ? NOW.toLocaleDateString("en-US", { month: "long", year: "numeric" })
+    : period === "all" ? "All Time" : `Last ${period} Days`;
+
+  document.getElementById("cat-sub").textContent = `${filtered.length} hiring requests · ${periodLabel}`;
+  document.getElementById("cat-chart-title").textContent = `Role Categories — ${periodLabel}`;
+  document.getElementById("cat-chart-sub").textContent = `${filtered.length} HRs analyzed`;
+
+  // Count categories
+  const cats = {};
+  filtered.forEach(r => { cats[r.category] = (cats[r.category] || 0) + 1; });
+  const sorted = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+  const total = filtered.length;
+
+  // Category cards
+  const grid = document.getElementById("cat-grid");
+  grid.innerHTML = sorted.map(([ cat, count ], i) => {
+    const pct = total ? Math.round(count / total * 100) : 0;
+    return `<div class="cat-card${i === 0 ? ' top' : ''}">
+      <div class="cat-card-label">${cat}</div>
+      <div class="cat-card-count">${count}</div>
+      <div class="cat-card-pct">${pct}% of total</div>
+    </div>`;
+  }).join("");
+
+  // Bar chart
+  const ctx1 = document.getElementById("chartCatBar");
+  if (catBarChart) catBarChart.destroy();
+  catBarChart = new Chart(ctx1, {
+    type: "bar",
+    data: { labels: sorted.map(e => e[0]), datasets: [{ data: sorted.map(e => e[1]), backgroundColor: CHART_COLORS.slice(0, sorted.length), borderRadius: 6, borderSkipped: false }] },
+    options: { indexAxis: "y", plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { font: { family: "Poppins", size: 10 } } }, y: { ticks: { font: { family: "Poppins", size: 10 } } } }, maintainAspectRatio: false }
+  });
+
+  // Pie chart
+  const ctx2 = document.getElementById("chartCatPie");
+  if (catPieChart) catPieChart.destroy();
+  catPieChart = new Chart(ctx2, {
+    type: "doughnut",
+    data: { labels: sorted.map(e => e[0]), datasets: [{ data: sorted.map(e => e[1]), backgroundColor: CHART_COLORS.slice(0, sorted.length), borderWidth: 2, borderColor: "#fff" }] },
+    options: { plugins: { legend: { position: "bottom", labels: { font: { family: "Poppins", size: 9 }, padding: 6 } } }, cutout: "60%", maintainAspectRatio: false }
+  });
+
+  // Top titles table
+  const titles = {};
+  filtered.forEach(r => {
+    if (r.role) {
+      const key = r.role.trim();
+      if (!titles[key]) titles[key] = { count: 0, category: r.category };
+      titles[key].count++;
+    }
+  });
+  const topTitles = Object.entries(titles).sort((a, b) => b[1].count - a[1].count).slice(0, 25);
+  document.getElementById("titles-table-title").textContent = `Top Job Titles — ${periodLabel}`;
+  document.getElementById("titles-table-count").textContent = `· ${topTitles.length} shown`;
+  document.getElementById("titles-tbody").innerHTML = topTitles.map(([title, { count, category }]) =>
+    `<tr><td>${title}</td><td style="font-size:12px;color:var(--gray-600);">${category}</td><td style="font-weight:700;">${count}</td></tr>`
+  ).join("");
+}
+
+document.querySelectorAll("[data-catperiod]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("[data-catperiod]").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    renderCategoryTab(ALL_RECORDS.map(parseRecord), btn.dataset.catperiod);
+  });
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// RECRUITER TAB
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let recBarChart = null, recPieChart = null;
+
+function renderRecruiterTab(data) {
+  const active = data.filter(r => r.isActive);
+
+  // Count per recruiter
+  const recruiters = {};
+  active.forEach(r => {
+    const name = r.recruiter || "Unassigned";
+    if (!recruiters[name]) recruiters[name] = { total: 0, new: 0, open: 0, sent: 0, interview: 0, offered: 0, hired: 0 };
+    recruiters[name].total++;
+    if (r.status.includes("0 - New")) recruiters[name].new++;
+    if (r.status.includes("30 - Open")) recruiters[name].open++;
+    if (r.status.includes("50 -")) recruiters[name].sent++;
+    if (r.status.includes("60 -")) recruiters[name].interview++;
+    if (r.status.includes("99 -")) recruiters[name].offered++;
+  });
+
+  // Also count hired all-time
+  data.filter(r => r.status === "100 - Hired" || r.status === "98 - Hired - GTC").forEach(r => {
+    const name = r.recruiter || "Unassigned";
+    if (!recruiters[name]) recruiters[name] = { total: 0, new: 0, open: 0, sent: 0, interview: 0, offered: 0, hired: 0 };
+    recruiters[name].hired++;
+  });
+
+  const sorted = Object.entries(recruiters).sort((a, b) => b[1].total - a[1].total);
+  const maxCount = sorted.length ? sorted[0][1].total : 1;
+
+  // Leaderboard
+  const lb = document.getElementById("recruiter-leaderboard");
+  const rankCls = ["r1", "r2", "r3"];
+  const colors = CHART_COLORS;
+  lb.innerHTML = `<div class="lb-title">👑 Recruiter Leaderboard — Active HRs</div>` +
+    sorted.slice(0, 15).map(([name, stats], i) => {
+      const initial = name.charAt(0).toUpperCase();
+      const color = colors[i % colors.length];
+      const pct = Math.round(stats.total / maxCount * 100);
+      return `<div class="lb-row">
+        <div class="lb-rank ${i < 3 ? rankCls[i] : ''}">${i + 1}</div>
+        <div class="lb-avatar" style="background:${color};">${initial}</div>
+        <div class="lb-info"><div class="lb-name">${name}</div><div class="lb-meta">${stats.total} active · ${stats.hired} hired all-time</div></div>
+        <div class="lb-bar-wrap"><div class="lb-bar-bg"><div class="lb-bar-fill" style="width:${pct}%;background:${color};"></div></div></div>
+        <div class="lb-stat" style="color:${color};">${stats.total}</div>
+      </div>`;
+    }).join("");
+
+  // Bar chart
+  const top10 = sorted.slice(0, 10);
+  const ctx1 = document.getElementById("chartRecruiterBar");
+  if (recBarChart) recBarChart.destroy();
+  recBarChart = new Chart(ctx1, {
+    type: "bar",
+    data: { labels: top10.map(e => e[0].split(" ")[0]), datasets: [{ data: top10.map(e => e[1].total), backgroundColor: CHART_COLORS.slice(0, top10.length), borderRadius: 6, borderSkipped: false }] },
+    options: { indexAxis: "y", plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { font: { family: "Poppins", size: 10 } } }, y: { ticks: { font: { family: "Poppins", size: 10 } } } }, maintainAspectRatio: false }
+  });
+
+  // Pie chart
+  const ctx2 = document.getElementById("chartRecruiterPie");
+  if (recPieChart) recPieChart.destroy();
+  const top6 = sorted.slice(0, 6);
+  const othersCount = sorted.slice(6).reduce((s, e) => s + e[1].total, 0);
+  const pieLabels = top6.map(e => e[0].split(" ")[0]);
+  const pieData = top6.map(e => e[1].total);
+  if (othersCount > 0) { pieLabels.push("Others"); pieData.push(othersCount); }
+  recPieChart = new Chart(ctx2, {
+    type: "doughnut",
+    data: { labels: pieLabels, datasets: [{ data: pieData, backgroundColor: CHART_COLORS.slice(0, pieLabels.length), borderWidth: 2, borderColor: "#fff" }] },
+    options: { plugins: { legend: { position: "bottom", labels: { font: { family: "Poppins", size: 10 }, padding: 8 } } }, cutout: "60%", maintainAspectRatio: false }
+  });
+
+  // Detail table
+  document.getElementById("recruiter-table-count").textContent = `· ${sorted.length} recruiters`;
+  document.getElementById("recruiter-tbody").innerHTML = sorted.map(([name, s]) =>
+    `<tr>
+      <td><strong>${name}</strong></td>
+      <td style="font-weight:700;">${s.total}</td>
+      <td>${s.new}</td><td>${s.open}</td><td>${s.sent}</td>
+      <td>${s.interview}</td><td>${s.offered}</td>
+      <td class="val-green">${s.hired}</td>
+    </tr>`
+  ).join("");
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// OVERVIEW TAB
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function renderOverview(data) {
+  const total = data.length;
+  const active = data.filter(r => r.isActive);
+  const hired = data.filter(r => r.status === "100 - Hired" || r.status === "98 - Hired - GTC");
+  const offered = data.filter(r => r.status === "99 - Offered");
+  const cancelled = data.filter(r => r.status.includes("Cancelled") || r.status.includes("-10") || r.status.includes("-20") || r.status.includes("-30"));
+  const unresponsive = data.filter(r => r.status.includes("85 -") || r.status.includes("80 -"));
+  const replacement = data.filter(r => r.status.includes("90 -"));
+  const new30 = data.filter(r => isWithinDays(r.createdDate, 30));
+  const new7 = data.filter(r => isWithinDays(r.createdDate, 7));
+
+  // KPI cards
+  document.getElementById("kpi-total").textContent = fmt(total);
+  document.getElementById("kpi-active").textContent = fmt(active.length);
+  document.getElementById("kpi-new-30").textContent = fmt(new30.length);
+  document.getElementById("kpi-new-30-sub").textContent = `${new7.length} in last 7 days`;
+  document.getElementById("kpi-hired").textContent = fmt(hired.length);
+  document.getElementById("kpi-offered").textContent = fmt(offered.length);
+  document.getElementById("kpi-cancelled").textContent = fmt(cancelled.length);
+  document.getElementById("kpi-cancelled-sub").textContent = total ? Math.round(cancelled.length / total * 100) + "% of all" : "—";
+  document.getElementById("kpi-unresponsive").textContent = fmt(unresponsive.length);
+  document.getElementById("kpi-replacement").textContent = fmt(replacement.length);
+
+  document.getElementById("overview-stat-line").textContent =
+    `${NOW.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} · ${fmt(total)} total hiring requests tracked · Live from Airtable`;
+
+  // Pipeline funnel (active stages)
+  const ACTIVE_STAGES = [
+    { match: "0 - New", label: "New" },
+    { match: "10 -", label: "Assigned" },
+    { match: "12 -", label: "QC" },
+    { match: "30 -", label: "Open" },
+    { match: "50 -", label: "Candidates Sent" },
+    { match: "60 -", label: "Interview" },
+    { match: "95 -", label: "Final" },
+    { match: "99 -", label: "Offered" },
+  ];
+
+  const funnel = document.getElementById("overview-pipeline");
+  const allCard = `<div class="pipe-stage" style="background:var(--blue-light);border-color:var(--blue);">
+    <div class="pipe-stage-num">${active.length}</div>
+    <div class="pipe-stage-name">All Active</div>
+  </div>`;
+  const stages = ACTIVE_STAGES.map(s => {
+    const count = active.filter(r => r.status.startsWith(s.match) || r.status.includes(s.match)).length;
+    return `<div class="pipe-stage">
+      <div class="pipe-stage-num">${count}</div>
+      <div class="pipe-stage-name">${s.label}</div>
+    </div>`;
+  }).join("");
+  funnel.innerHTML = allCard + stages;
+
+  // Status distribution chart
+  const statusCounts = {};
+  data.forEach(r => {
+    const label = (STATUS_MAP[r.status] || {}).label || r.status || "Unknown";
+    statusCounts[label] = (statusCounts[label] || 0) + 1;
+  });
+  const sLabels = Object.keys(statusCounts);
+  new Chart(document.getElementById("chartStatus"), {
+    type: "doughnut",
+    data: { labels: sLabels, datasets: [{ data: Object.values(statusCounts), backgroundColor: CHART_COLORS.slice(0, sLabels.length), borderWidth: 2, borderColor: "#fff" }] },
+    options: { plugins: { legend: { position: "bottom", labels: { font: { family: "Poppins", size: 9 }, padding: 6 } } }, cutout: "55%", maintainAspectRatio: false }
+  });
+
+  // Monthly volume (last 12 months)
+  const months = {};
+  const startMonth = new Date(NOW); startMonth.setMonth(startMonth.getMonth() - 11);
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(startMonth); d.setMonth(d.getMonth() + i);
+    months[d.toLocaleDateString("en-US", { month: "short", year: "2-digit" })] = 0;
+  }
+  data.forEach(r => {
+    if (r.createdDate && r.createdDate >= startMonth) {
+      const key = r.createdDate.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+      if (months[key] !== undefined) months[key]++;
+    }
+  });
+  new Chart(document.getElementById("chartMonthly"), {
+    type: "bar",
+    data: { labels: Object.keys(months), datasets: [{ data: Object.values(months), backgroundColor: "rgba(11,77,153,.25)", borderColor: "#0b4d99", borderWidth: 2, borderRadius: 4 }] },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { font: { family: "Poppins", size: 10 } }, grid: { color: "#f1f5f9" } }, x: { ticks: { font: { family: "Poppins", size: 9 } }, grid: { display: false } } }, maintainAspectRatio: false }
+  });
+
+  // Category chart (current month)
+  const currentMonth = data.filter(r => isInMonth(r.createdDate, NOW.getFullYear(), NOW.getMonth()));
+  const catCounts = {};
+  currentMonth.forEach(r => { catCounts[r.category] = (catCounts[r.category] || 0) + 1; });
+  const catSorted = Object.entries(catCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  new Chart(document.getElementById("chartCategories"), {
+    type: "bar",
+    data: { labels: catSorted.map(e => e[0].split("/")[0].trim()), datasets: [{ data: catSorted.map(e => e[1]), backgroundColor: CHART_COLORS.slice(0, catSorted.length), borderRadius: 6, borderSkipped: false }] },
+    options: { indexAxis: "y", plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { font: { family: "Poppins", size: 10 } } }, y: { ticks: { font: { family: "Poppins", size: 9 } } } }, maintainAspectRatio: false }
+  });
+
+  // YOY Comparison
+  renderYoY(data);
+}
+
+function renderYoY(data) {
+  const curYear = NOW.getFullYear();
+  const curMonth = NOW.getMonth();
+  const prevYear = curYear - 1;
+
+  const thisMonth = data.filter(r => isInMonth(r.createdDate, curYear, curMonth));
+  const lastYear = data.filter(r => isInMonth(r.createdDate, prevYear, curMonth));
+
+  const monthName = NOW.toLocaleDateString("en-US", { month: "long" });
+  document.getElementById("yoy-sub").textContent = `${monthName} ${curYear} vs ${monthName} ${prevYear}`;
+
+  // Category comparison
+  const catThis = {}, catLast = {};
+  thisMonth.forEach(r => { catThis[r.category] = (catThis[r.category] || 0) + 1; });
+  lastYear.forEach(r => { catLast[r.category] = (catLast[r.category] || 0) + 1; });
+
+  const allCats = [...new Set([...Object.keys(catThis), ...Object.keys(catLast)])].sort((a, b) => (catThis[b] || 0) - (catThis[a] || 0));
+
+  const grid = document.getElementById("yoy-grid");
+  grid.innerHTML = `
+    <div class="compare-card">
+      <div class="compare-title">📊 Volume Comparison</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div style="text-align:center;padding:20px;background:var(--blue-light);border-radius:12px;">
+          <div style="font-size:11px;color:var(--gray-400);font-weight:600;text-transform:uppercase;margin-bottom:8px;">${monthName} ${prevYear}</div>
+          <div style="font-size:36px;font-weight:800;color:var(--blue);">${lastYear.length}</div>
+          <div style="font-size:12px;color:var(--gray-600);">Hiring Requests</div>
+        </div>
+        <div style="text-align:center;padding:20px;background:var(--green-l);border-radius:12px;">
+          <div style="font-size:11px;color:var(--gray-400);font-weight:600;text-transform:uppercase;margin-bottom:8px;">${monthName} ${curYear}</div>
+          <div style="font-size:36px;font-weight:800;color:var(--green);">${thisMonth.length}</div>
+          <div style="font-size:12px;color:var(--gray-600);">Hiring Requests</div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:12px;">
+        ${lastYear.length ? `<span class="yoy-badge ${thisMonth.length >= lastYear.length ? 'yoy-up' : 'yoy-down'}">${thisMonth.length >= lastYear.length ? '▲' : '▼'} ${Math.abs(Math.round((thisMonth.length - lastYear.length) / lastYear.length * 100))}% YoY</span>` : '<span class="yoy-badge yoy-flat">No data last year</span>'}
+      </div>
+    </div>
+    <div class="compare-card">
+      <div class="compare-title">📁 Category Shifts</div>
+      <div style="max-height:280px;overflow-y:auto;">
+        <table style="width:100%;font-size:12px;">
+          <thead><tr><th style="text-align:left;font-size:10px;">Category</th><th style="text-align:center;font-size:10px;">${prevYear}</th><th style="text-align:center;font-size:10px;">${curYear}</th><th style="text-align:center;font-size:10px;">Change</th></tr></thead>
+          <tbody>${allCats.map(cat => {
+            const prev = catLast[cat] || 0;
+            const cur = catThis[cat] || 0;
+            const change = prev > 0 ? Math.round((cur - prev) / prev * 100) : (cur > 0 ? 100 : 0);
+            const badge = change > 0 ? `<span class="yoy-badge yoy-up">+${change}%</span>` : change < 0 ? `<span class="yoy-badge yoy-down">${change}%</span>` : `<span class="yoy-badge yoy-flat">—</span>`;
+            return `<tr><td style="font-weight:500;">${cat}</td><td style="text-align:center;">${prev}</td><td style="text-align:center;font-weight:700;">${cur}</td><td style="text-align:center;">${badge}</td></tr>`;
+          }).join("")}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// INIT
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+document.getElementById("topbar-date").textContent = NOW.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+
+async function boot() {
+  try {
+    ALL_RECORDS = await fetchAllRecords();
+    const data = ALL_RECORDS.map(parseRecord);
+
+    document.getElementById("loading-sub").textContent = `${data.length} records loaded. Rendering...`;
+
+    renderOverview(data);
+    renderPipelineTable(data);
+    renderCategoryTab(data, "current");
+    renderRecruiterTab(data);
+
+    // Hide loading
+    setTimeout(() => {
+      document.getElementById("loading").classList.add("hidden");
+    }, 300);
+
+    console.log(`✅ Dashboard loaded: ${data.length} hiring requests from Airtable`);
+  } catch (err) {
+    console.error("❌ Failed to load:", err);
+    document.getElementById("loading-sub").textContent = `Error: ${err.message}. Check API token.`;
+    document.getElementById("loading-text")?.remove();
+  }
+}
+
+boot();
+</script>
+</body>
+</html>
