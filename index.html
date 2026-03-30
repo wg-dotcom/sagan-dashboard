@@ -216,7 +216,7 @@
     <div class="topbar-logo">SP</div>
     <div>
       <div class="topbar-name">Sagan Passport — Hiring Request Dashboard</div>
-      <div class="topbar-sub">Live from Airtable · Sagan Operating System</div>
+      <div class="topbar-sub">Synced from Airtable · Sagan Operating System</div>
     </div>
   </div>
   <div class="topbar-right">
@@ -420,51 +420,21 @@
 
 <script>
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// AIRTABLE CONFIG
+// DATA SOURCE — JSON synced from Airtable via GitHub Actions (hourly)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const AT_BASE = "appNzXyob8i9CS8RR";
-const AT_TABLE = "tblhOPkoHV2NO4NXJ";
-const _at = [112,97,116,68,52,51,75,76,119,84,113,55,55,90,113,50,67,46,99,56,49,48,97,57,53,97,102,50,100,99,55,55,53,56,56,101,48,54,101,57,98,49,56,52,55,101,49,102,56,98,55,98,102,56,99,55,102,50,49,99,56,56,53,102,102,54,102,102,49,51,52,53,53,99,57,55,99,48,98,100,49,50];
-function _at_get(){ return _at.map(c=>String.fromCharCode(c)).join(""); }
-
-// Fields we need
-const FIELDS = [
-  "Request Name", "Job Title", "Request Status", "Created",
-  "Company Name", "Recruiter's Name (from Assigned recruiter)",
-  "Which category best describes the position you are hiring for?*",
-  "Days since received", "Hiring Type", "WG Status",
-  "Request Completion Date", "Approval Date"
-];
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// AIRTABLE FETCH (paginated)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const DATA_URL = "https://raw.githubusercontent.com/wg-dotcom/sagan-dashboard/main/sagan-data.json";
 let ALL_RECORDS = [];
+let DATA_UPDATED = null;
 
 async function fetchAllRecords() {
-  const records = [];
-  let offset = null;
-  let page = 0;
+  document.getElementById("loading-sub").textContent = "Fetching synced data...";
 
-  do {
-    page++;
-    document.getElementById("loading-sub").textContent = `Fetching page ${page}...`;
+  const resp = await fetch(DATA_URL + "?cb=" + Date.now());
+  if (!resp.ok) throw new Error(`Failed to load data: ${resp.status}`);
+  const data = await resp.json();
 
-    let url = `https://api.airtable.com/v0/${AT_BASE}/${AT_TABLE}?pageSize=100`;
-    FIELDS.forEach(f => { url += "&fields[]=" + encodeURIComponent(f); });
-    if (offset) url += "&offset=" + offset;
-
-    const resp = await fetch(url, {
-      headers: { "Authorization": "Bearer " + _at_get() }
-    });
-
-    if (!resp.ok) throw new Error(`Airtable API error: ${resp.status}`);
-    const data = await resp.json();
-    records.push(...data.records);
-    offset = data.offset || null;
-  } while (offset);
-
-  return records;
+  DATA_UPDATED = data.updated ? new Date(data.updated) : null;
+  return data.records || [];
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -985,11 +955,17 @@ async function boot() {
       document.getElementById("loading").classList.add("hidden");
     }, 300);
 
-    console.log(`✅ Dashboard loaded: ${data.length} hiring requests from Airtable`);
+    // Update footer with sync time
+    if (DATA_UPDATED) {
+      const syncStr = DATA_UPDATED.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+        + " · " + DATA_UPDATED.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+      document.querySelector(".footer").innerHTML = `Sagan Passport — Hiring Request Dashboard · <span>Last synced: ${syncStr}</span> · ${data.length} records · Built with ♥ for the Sagan team`;
+    }
+
+    console.log(`✅ Dashboard loaded: ${data.length} hiring requests`);
   } catch (err) {
     console.error("❌ Failed to load:", err);
-    document.getElementById("loading-sub").textContent = `Error: ${err.message}. Check API token.`;
-    document.getElementById("loading-text")?.remove();
+    document.getElementById("loading-sub").textContent = `Error: ${err.message}`;
   }
 }
 
